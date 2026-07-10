@@ -34,10 +34,10 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             isLoading = true
             loadError = null
-            FamilyRepository.loadData(getApplication())
+            // 1. 快速加载本地数据（缓存/asset），立即展示
+            FamilyRepository.loadDataFast(getApplication())
                 .onSuccess { data ->
                     allData = data
-                    // 数据加载后重置选中分支
                     if (selectedBranchIndex >= data.size) {
                         selectedBranchIndex = 0
                     }
@@ -46,6 +46,10 @@ class FamilyViewModel(application: Application) : AndroidViewModel(application) 
                     loadError = error.message ?: "数据加载失败"
                 }
             isLoading = false
+            // 2. 仅缓存过期时，后台静默拉取最新数据并更新缓存文件
+            if (FamilyRepository.isCacheExpired(getApplication())) {
+                FamilyRepository.refreshCacheInBackground(getApplication())
+            }
         }
     }
 

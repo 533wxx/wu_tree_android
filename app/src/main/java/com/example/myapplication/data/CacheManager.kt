@@ -14,8 +14,8 @@ object CacheManager {
     private const val PREFS_NAME = "family_cache_prefs"
     private const val KEY_TIMESTAMP = "cache_timestamp"
 
-    /** 缓存有效期：7 天（毫秒） */
-    val CACHE_TTL_MS: Long = 7L * 24 * 60 * 60 * 1000
+    /** 缓存有效期：1 小时（毫秒） */
+    val CACHE_TTL_MS: Long = 60 * 60 * 1000L
 
     /**
      * 检查缓存是否在有效期内。

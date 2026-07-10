@@ -20,9 +20,6 @@ data class Person(
     val note: String? = null,
     val daughters: List<String>? = null,
     val children: List<Person>? = null,
-    val birthSolar: String? = null,
-    val birthYear: String? = null,
-    val birthDisplay: String? = null,
     val wifeDisplay: String? = null,
     val deathDisplay: String? = null,
     val birthOrder: String? = null

@@ -7,16 +7,12 @@ package com.example.myapplication.data
 object DateFormatter {
 
     fun formatBirthDisplay(person: Person): String? {
-        // 优先使用预处理好的 display
-        if (!person.birthDisplay.isNullOrBlank()) return person.birthDisplay
-        val birth = person.birth ?: return null
-        return insertYear(birth, person.birthYear)
+        return person.birth
     }
 
     fun formatDeathDisplay(person: Person): String? {
         if (!person.deathDisplay.isNullOrBlank()) return person.deathDisplay
-        val death = person.death ?: return null
-        return insertYear(death, person.birthYear) // death may reference different year, best effort
+        return person.death
     }
 
     fun formatWifeDisplay(person: Person): String? {
@@ -24,20 +20,5 @@ object DateFormatter {
         return person.wife
     }
 
-    private fun insertYear(text: String, year: String?): String {
-        if (year.isNullOrBlank()) return text
-
-        // Pattern: 公元YYYY年... → already has year
-        if (text.startsWith("公元") && text.contains(year)) return text
-
-        // Find first "年" after era+ganzhi
-        // e.g. "光绪戊寅年十一月..." → insert after first 年
-        val firstNian = text.indexOf('年')
-        if (firstNian < 0) return text
-
-        val before = text.substring(0, firstNian + 1) // includes 年
-        val after = text.substring(firstNian + 1)
-
-        return "$before（${year}年）$after"
-    }
+    private const val TAG = "DateFormatter"
 }

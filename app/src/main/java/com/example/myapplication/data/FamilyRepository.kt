@@ -26,40 +26,49 @@ object FamilyRepository {
      * 加载族谱数据。
      * 在 [Dispatchers.IO] 上执行，适配 Compose ViewModel 的 viewModelScope。
      */
-    suspend fun loadData(context: Context): Result<List<FamilyData>> =
+    /**
+     * 始终从本地缓存文件加载数据。
+     * 若缓存文件不存在，从 asset 初始化种子数据。
+     */
+    suspend fun loadDataFast(context: Context): Result<List<FamilyData>> =
         withContext(Dispatchers.IO) {
             try {
-                // 1. 检查有效缓存（< 7 天）
-                CacheManager.loadFromCache(context)?.let { json ->
-                    val data = gson.fromJson<List<FamilyData>>(json, dataType)
-                    return@withContext Result.success(data)
-                }
+                // 始终读取缓存文件（即使已过期）
+                val json = CacheManager.loadExpiredCache(context)
+                    ?: run {
+                        // 缓存文件不存在 → 从 asset 初始化种子
+                        val seedJson = context.assets.open("family_data.json")
+                            .bufferedReader().use(BufferedReader::readText)
+                        CacheManager.saveToCache(context, seedJson)
+                        seedJson
+                    }
+                val data = gson.fromJson<List<FamilyData>>(json, dataType)
+                Result.success(data)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
-                // 2. 缓存过期或不存在 → 网络获取
+    /**
+     * 判断缓存是否已过期，用于决定是否需要后台刷新。
+     */
+    fun isCacheExpired(context: Context): Boolean = !CacheManager.isCacheValid(context)
+
+    /**
+     * 后台静默刷新：从网络拉取最新数据并写入缓存。
+     * 失败不抛异常，静默忽略。
+     */
+    suspend fun refreshCacheInBackground(context: Context) {
+        withContext(Dispatchers.IO) {
+            try {
                 val json = fetchRemoteJson()
                 val data = gson.fromJson<List<FamilyData>>(json, dataType)
                 CacheManager.saveToCache(context, json)
-                Result.success(data)
-            } catch (e: Exception) {
-                // 3. 网络失败 → 依次降级
-                e.printStackTrace()
-                try {
-                    // 3a. 尝试过期缓存
-                    CacheManager.loadExpiredCache(context)?.let { json ->
-                        val data = gson.fromJson<List<FamilyData>>(json, dataType)
-                        return@withContext Result.success(data)
-                    }
-
-                    // 3b. 尝试内置 asset
-                    val assetJson = context.assets.open("family_data.json")
-                        .bufferedReader().use(BufferedReader::readText)
-                    val data = gson.fromJson<List<FamilyData>>(assetJson, dataType)
-                    Result.success(data)
-                } catch (fallbackError: Exception) {
-                    Result.failure(fallbackError)
-                }
+            } catch (_: Exception) {
+                // 静默忽略
             }
         }
+    }
 
     private fun fetchRemoteJson(): String {
         val url = URL(REMOTE_URL)
